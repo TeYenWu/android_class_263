@@ -1,9 +1,11 @@
 package com.example.simpleui.simpleui;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -20,7 +22,11 @@ import org.w3c.dom.Text;
 
 import java.util.List;
 
+
+
 public class MainActivity extends AppCompatActivity {
+
+    private  static  final int REQUEST_CODE_MENU_ACTIVITY = 0;
 
     TextView textView;
     EditText editText;
@@ -122,5 +128,53 @@ public class MainActivity extends AppCompatActivity {
         editText.setText("");
         textView.setText(text);
 
+    }
+
+    public  void goToMenu(View view)
+    {
+        Intent intent = new Intent();
+        intent.setClass(this, DrinkMenuActivity.class);
+
+        startActivityForResult(intent, REQUEST_CODE_MENU_ACTIVITY);
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_MENU_ACTIVITY) {
+            if (resultCode == RESULT_OK) {
+                textView.setText(data.getStringExtra("result"));
+            }
+        }
+    }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d("debug", "main activity onDestroy");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d("debug", "main activity onPause");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.d("debug", "main activity onStop");
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        Log.d("debug", "main activity onRestart");
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d("debug", "main activity onStart");
     }
 }
