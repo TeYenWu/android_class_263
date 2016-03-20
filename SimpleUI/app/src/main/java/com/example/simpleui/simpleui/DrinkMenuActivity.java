@@ -31,7 +31,7 @@ public class DrinkMenuActivity extends AppCompatActivity {
     public void done(View view) {
         JSONArray jsonData = getData();
         Intent data = new Intent();
-        data.putExtra("result", "123123");
+        data.putExtra("result", jsonData.toString());
         setResult(RESULT_OK, data);
         finish();
     }

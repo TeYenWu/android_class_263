@@ -3,6 +3,7 @@ package com.example.simpleui.simpleui;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -14,19 +15,33 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.SimpleAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.parse.Parse;
+import com.parse.ParseException;
+import com.parse.ParseFile;
+import com.parse.ParseObject;
+import com.parse.SaveCallback;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.w3c.dom.Text;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 
 
 public class MainActivity extends AppCompatActivity {
 
     private  static  final int REQUEST_CODE_MENU_ACTIVITY = 0;
+
+    private String menuResult;
 
     TextView textView;
     EditText editText;
@@ -35,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
     SharedPreferences.Editor editor;
     ListView historyListView;
     Spinner storeInfoSpinner;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
         textView = (TextView)findViewById(R.id.textView);
         editText = (EditText)findViewById(R.id.editText);
 
-        editText.setText(sp.getString("inputText", ""));
+//        editText.setText(sp.getString("inputText", ""));
 
         editText.setOnKeyListener(new View.OnKeyListener() {
             @Override
@@ -94,6 +110,11 @@ public class MainActivity extends AppCompatActivity {
 
         storeInfoSpinner = (Spinner)findViewById(R.id.spinner);
         setStoreInfos();
+
+        Parse.enableLocalDatastore(this);
+
+        Parse.initialize(this);
+
     }
 
     private void setHistory()
@@ -101,7 +122,6 @@ public class MainActivity extends AppCompatActivity {
         String[] data = Utils.readFile(this, "history.txt").split("\n");
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, data);
         historyListView.setAdapter(adapter);
-
     }
 
     private void setStoreInfos()
@@ -114,19 +134,46 @@ public class MainActivity extends AppCompatActivity {
 
     public  void submit(View view)
     {
-        String text = editText.getText().toString();
-        Utils.writeFile(this, "history.txt", text + '\n');
 
-//        text = Utils.readFile(this, "history.txt");
-        if (hideCheckBox.isChecked())
-        {
-            Toast.makeText(this,text,Toast.LENGTH_LONG).show();
-            textView.setText("**********");
-            editText.setText("**********");
-            return;
+        String text = editText.getText().toString();
+        try {
+            JSONObject orderData = new JSONObject();
+            if (menuResult == null)
+                menuResult = "[]";
+            JSONArray array = new JSONArray(menuResult);
+            orderData.put("note", text);
+            orderData.put("menu", array);
+            orderData.put("storeInfo", storeInfoSpinner.getSelectedItem());
+            Utils.writeFile(this, "history.txt", orderData.toString() + "\n");
+            ParseObject orderObject = new ParseObject("Order");
+            orderObject.put("note", text);
+            orderObject.put("storeInfo", storeInfoSpinner.getSelectedItem());
+            orderObject.put("menu", menuResult);
+            orderObject.saveInBackground(new SaveCallback() {
+                @Override
+                public void done(ParseException e) {
+                    if (e == null) {
+                        Toast.makeText(MainActivity.this,
+                                "[SaveCallback] ok", Toast.LENGTH_SHORT).show();
+                    } else {
+                        e.printStackTrace();
+                        Toast.makeText(MainActivity.this,
+                                "[SaveCallback] fail", Toast.LENGTH_SHORT).show();
+                    }
+                    setHistory();
+                }
+            });
+
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
-        editText.setText("");
-        textView.setText(text);
+//        if (hideCheckBox.isChecked())
+//        {
+//            Toast.makeText(this,text,Toast.LENGTH_LONG).show();
+//            textView.setText("**********");
+//            return;
+//        }
+        textView.setText("");
 
     }
 
@@ -144,37 +191,29 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_MENU_ACTIVITY) {
             if (resultCode == RESULT_OK) {
-                textView.setText(data.getStringExtra("result"));
+                menuResult = (data.getStringExtra("result"));
+
+                String text = "";
+
+                JSONArray jsonArray = null;
+                try {
+                    jsonArray = new JSONArray(menuResult);
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject order = jsonArray.getJSONObject(i);
+
+                        text = text + order.getString("name") + " l : " + String.valueOf(order.getInt("l")) + " m : " + String.valueOf(order.getInt("m")) + "\n";
+
+
+                    }
+                    textView.setText(text);
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+
+
             }
         }
-    }
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Log.d("debug", "main activity onDestroy");
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Log.d("debug", "main activity onPause");
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.d("debug", "main activity onStop");
-    }
-
-    @Override
-    protected void onRestart() {
-        super.onRestart();
-        Log.d("debug", "main activity onRestart");
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Log.d("debug", "main activity onStart");
     }
 }
