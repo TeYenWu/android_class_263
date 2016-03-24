@@ -19,6 +19,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -57,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String menuResult;
     private List<ParseObject> queryResult;
-
+    private boolean hasPhoto = false;
 
     TextView textView;
     EditText editText;
@@ -67,7 +68,8 @@ public class MainActivity extends AppCompatActivity {
     ListView historyListView;
     Spinner storeInfoSpinner;
     ImageView photoImageView;
-
+    ProgressBar progressBar;
+    ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,6 +110,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        photoImageView = (ImageView)findViewById(R.id.imageView);
+
         hideCheckBox = (CheckBox)findViewById(R.id.checkBox);
 
         hideCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -115,15 +119,30 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 editor.putBoolean("hideCheckBox", hideCheckBox.isChecked());
                 editor.apply();
+
+                if (isChecked) {
+                    photoImageView.setVisibility(View.GONE);
+                } else {
+                    photoImageView.setVisibility(View.VISIBLE);
+                }
             }
         });
 
         hideCheckBox.setChecked(sp.getBoolean("hideCheckBox", false));
 
-        photoImageView = (ImageView)findViewById(R.id.imageView);
+        progressBar = (ProgressBar)findViewById(R.id.progressBar);
+
+        progressDialog = new ProgressDialog(this);
 
         historyListView = (ListView)findViewById(R.id.listView);
         setHistory();
+
+        historyListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                goToDetailOrder(position);
+            }
+        });
 
 
         storeInfoSpinner = (Spinner)findViewById(R.id.spinner);
@@ -142,6 +161,7 @@ public class MainActivity extends AppCompatActivity {
                 if (e != null) {
                     Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                     e.printStackTrace();
+                    progressBar.setVisibility(View.GONE);
                     return;
                 }
                 queryResult = objects;
@@ -158,6 +178,17 @@ public class MainActivity extends AppCompatActivity {
                     item.put("storeInfo", storeInfo);
 
                     int drinkNum = 0;
+                    try {
+                        JSONArray array = new JSONArray(menu);
+                        for (int j = 0; j < array.length(); j++) {
+
+                            JSONObject order = array.getJSONObject(j);
+                            drinkNum += order.getInt("l") + order.getInt("m");
+                        }
+                    } catch (JSONException e1) {
+                        e1.printStackTrace();
+                    }
+
 
 
                     item.put("drinkNum", String.valueOf(drinkNum));
@@ -172,6 +203,8 @@ public class MainActivity extends AppCompatActivity {
                         data, R.layout.listview_item, from, to);
 
                 historyListView.setAdapter(adapter);
+                historyListView.setVisibility(View.VISIBLE);
+                progressBar.setVisibility(View.GONE);
             }
         });
 
@@ -202,15 +235,25 @@ public class MainActivity extends AppCompatActivity {
 
         String text = editText.getText().toString();
 
+        progressDialog.setTitle("Loading...");
+        progressDialog.show();
+
         ParseObject orderObject = new ParseObject("Order");
         orderObject.put("note", text);
         orderObject.put("storeInfo", storeInfoSpinner.getSelectedItem());
         orderObject.put("menu", menuResult);
 
+        if (hasPhoto)
+        {
+            Uri uri = Utils.getPhotoUri();
+            ParseFile parseFile = new ParseFile("photo.png", Utils.uriToBytes(this, uri));
+            orderObject.put("photo", parseFile);
+        }
 
         orderObject.saveInBackground(new SaveCallback() {
             @Override
             public void done(ParseException e) {
+                progressDialog.dismiss();
                 if (e == null) {
                     Toast.makeText(MainActivity.this,
                             "[SaveCallback] ok", Toast.LENGTH_SHORT).show();
@@ -221,7 +264,9 @@ public class MainActivity extends AppCompatActivity {
                 }
                 setHistory();
                 textView.setText("");
+                editText.setText("");
                 menuResult = "";
+                hasPhoto = false;
                 photoImageView.setImageResource(0);
             }
         });
@@ -268,6 +313,7 @@ public class MainActivity extends AppCompatActivity {
             if (resultCode == RESULT_OK) {
                 Uri uri = Utils.getPhotoUri();
                 photoImageView.setImageURI(uri);
+                hasPhoto = true;
             }
         }
     }
@@ -292,12 +338,40 @@ public class MainActivity extends AppCompatActivity {
 
     @TargetApi(Build.VERSION_CODES.M)
     private void goToCamera() {
-
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+            {
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        0);
+                return;
+            }
+        }
         Intent intent = new Intent();
         intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
         intent.putExtra(MediaStore.EXTRA_OUTPUT, Utils.getPhotoUri());
         startActivityForResult(intent, REQUEST_TAKE_PHOTO);
+        
+    }
 
+    private void goToDetailOrder(int position)
+    {
+        Intent intent = new Intent();
+
+        intent.setClass(this, OrderDetailActivity.class);
+
+        ParseObject object = queryResult.get(position);
+
+        intent.putExtra("note", object.getString("note"));
+        intent.putExtra("menu", object.getString("menu"));
+        intent.putExtra("storeInfo", object.getString("storeInfo"));
+//
+        if(object.getParseFile("photo") != null)
+        {
+            intent.putExtra("photoURL", object.getParseFile("photo").getUrl());
+
+        }
+
+        startActivity(intent);
     }
 
 }
