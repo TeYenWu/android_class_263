@@ -183,7 +183,7 @@ public class MainActivity extends AppCompatActivity {
                         for (int j = 0; j < array.length(); j++) {
 
                             JSONObject order = array.getJSONObject(j);
-                            drinkNum += order.getInt("l") + order.getInt("m");
+                            drinkNum += order.getInt("lNumber") + order.getInt("mNumber");
                         }
                     } catch (JSONException e1) {
                         e1.printStackTrace();
@@ -298,7 +298,7 @@ public class MainActivity extends AppCompatActivity {
                     for (int i = 0; i < jsonArray.length(); i++) {
                         JSONObject order = jsonArray.getJSONObject(i);
 
-                        text = text + order.getString("name") + " l : " + String.valueOf(order.getInt("l")) + " m : " + String.valueOf(order.getInt("m")) + "\n";
+                        text = text + order.getString("name") + " l : " + String.valueOf(order.getInt("lNumber")) + " m : " + String.valueOf(order.getInt("mNumber")) + "\n";
 
 
                     }
