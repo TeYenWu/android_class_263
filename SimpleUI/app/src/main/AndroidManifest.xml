@@ -17,12 +17,16 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <!--<meta-data-->
+            <!--android:name="com.parse.APPLICATION_ID"-->
+            <!--android:value="XcUmvcSIMJefbmJDFcidLC6mNBQEAaGHYiGPSYAS" />-->
+        <!--<meta-data-->
+            <!--android:name="com.parse.CLIENT_KEY"-->
+            <!--android:value="DnZ3ggXI55eF8ypD5bps3eBYQ0qAFCHehre5Wu6a" />-->
         <meta-data
-            android:name="com.parse.APPLICATION_ID"
-            android:value="XcUmvcSIMJefbmJDFcidLC6mNBQEAaGHYiGPSYAS" />
-        <meta-data
-            android:name="com.parse.CLIENT_KEY"
-            android:value="DnZ3ggXI55eF8ypD5bps3eBYQ0qAFCHehre5Wu6a" />
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyB9PL-zOc5gVNFYk2TnClh1EnmtCn0CsSg" />
+        <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
 
         <activity android:name=".MainActivity">
             <intent-filter>
@@ -33,6 +37,16 @@
         </activity>
         <activity android:name=".DrinkMenuActivity" />
         <activity android:name=".OrderDetailActivity"></activity>
+        <activity
+            android:name="com.facebook.FacebookActivity"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- ATTENTION: This was auto-generated to add Google Play services to your project for
+             App Indexing.  See https://g.co/AppIndexing/AndroidStudio for more information. -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
     </application>
 
 </manifest>

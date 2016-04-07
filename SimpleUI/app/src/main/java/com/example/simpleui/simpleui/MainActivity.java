@@ -32,6 +32,16 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.facebook.AccessToken;
+import com.facebook.AccessTokenTracker;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
+import com.facebook.GraphRequest;
+import com.facebook.GraphResponse;
+import com.facebook.login.LoginManager;
+import com.facebook.login.LoginResult;
+import com.facebook.login.widget.LoginButton;
 import com.parse.FindCallback;
 import com.parse.Parse;
 import com.parse.ParseException;
@@ -46,6 +56,7 @@ import org.json.JSONObject;
 import org.w3c.dom.Text;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
     private  static  final int REQUEST_CODE_MENU_ACTIVITY = 0;
     private  static  final int REQUEST_TAKE_PHOTO = 1;
 
-    private String menuResult;
+    private String menuResult = "";
     private List<ParseObject> queryResult;
     private boolean hasPhoto = false;
 
@@ -70,6 +81,10 @@ public class MainActivity extends AppCompatActivity {
     ImageView photoImageView;
     ProgressBar progressBar;
     ProgressDialog progressDialog;
+    LoginButton loginButton;
+    CallbackManager callbackManager;
+    AccessToken accessToken;
+    AccessTokenTracker accessTokenTracker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -150,7 +165,89 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+        setupFacebook();
     }
+
+    private FacebookCallback<LoginResult> facebookRegisterCallBack = new FacebookCallback<LoginResult>() {
+        @Override
+        public void onSuccess(LoginResult loginResult) {
+            accessToken = AccessToken.getCurrentAccessToken();
+            GraphRequest request = GraphRequest.newGraphPathRequest(accessToken
+                    , "/v2.5/me",
+                    new GraphRequest.Callback() {
+                        @Override
+                        public void onCompleted(GraphResponse response) {
+                            JSONObject object = response.getJSONObject();
+                            try {
+                                String name = object.getString("name");
+                                Toast.makeText(MainActivity.this, "Hello " + name, Toast.LENGTH_SHORT).show();
+                                textView.setText("Hello " + name);
+                                Log.d("debug", object.toString());
+
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+            request.executeAsync();
+        }
+
+        @Override
+        public void onCancel() {
+
+        }
+
+        @Override
+        public void onError(FacebookException error) {
+
+        }
+    };
+
+    private void setupFacebook() {
+        callbackManager = CallbackManager.Factory.create();
+        loginButton = (LoginButton) findViewById(R.id.loginButton);
+        loginButton.registerCallback(callbackManager, facebookRegisterCallBack);
+        accessTokenTracker = new AccessTokenTracker() {
+            @Override
+            protected void onCurrentAccessTokenChanged(
+                    AccessToken oldAccessToken,
+                    AccessToken currentAccessToken) {
+                if(currentAccessToken == null)
+                {
+                    Toast.makeText(MainActivity.this, "Logout", Toast.LENGTH_SHORT).show();
+                    textView.setText("Hello World");
+                }
+            }
+        };
+
+        // If the access token is available already assign it.
+        accessToken = AccessToken.getCurrentAccessToken();
+        if((accessToken = AccessToken.getCurrentAccessToken()) != null)
+        {
+            GraphRequest request = GraphRequest.newGraphPathRequest(accessToken
+                    , "/v2.5/me",
+                    new GraphRequest.Callback() {
+                        @Override
+                        public void onCompleted(GraphResponse response) {
+                            JSONObject object = response.getJSONObject();
+                            try {
+                                String name = object.getString("name");
+                                Toast.makeText(MainActivity.this, "Hello " + name, Toast.LENGTH_SHORT).show();
+                                textView.setText("Hello " + name);
+                                Log.d("debug", object.toString());
+
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+            request.executeAsync();
+        }
+//        LoginManager.getInstance().registerCallback(callbackManager, facebookRegisterCallBack);
+//        LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList("public_profile", "user_friends"));
+
+    }
+
 
     private void setHistory()
     {
@@ -217,6 +314,8 @@ public class MainActivity extends AppCompatActivity {
         query.findInBackground(new FindCallback<ParseObject>() {
             @Override
             public void done(List<ParseObject> objects, ParseException e) {
+                if(e != null || objects == null)
+                    return;
                 String[] stores = new String[objects.size()];
                 for (int i = 0; i < stores.length; i++) {
                     ParseObject object = objects.get(i);
@@ -316,6 +415,7 @@ public class MainActivity extends AppCompatActivity {
                 hasPhoto = true;
             }
         }
+        callbackManager.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
@@ -374,4 +474,9 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        accessTokenTracker.stopTracking();
+    }
 }

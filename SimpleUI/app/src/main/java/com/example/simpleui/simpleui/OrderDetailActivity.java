@@ -15,7 +15,17 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
@@ -30,6 +40,9 @@ public class OrderDetailActivity extends AppCompatActivity {
     ImageView photoImageView;
     ImageView staticMapImage;
     WebView staticMapWeb;
+    Switch staticWebSwitch;
+    GoogleMap googleMap;
+    MapFragment mapFragment;
 
     private String address;
 
@@ -44,6 +57,7 @@ public class OrderDetailActivity extends AppCompatActivity {
         photoImageView = (ImageView) findViewById(R.id.photoView);
         staticMapImage = (ImageView) findViewById(R.id.staticImageView);
         staticMapWeb = (WebView) findViewById(R.id.webView);
+        staticWebSwitch = (Switch)findViewById(R.id.staticMapSwitch);
         staticMapWeb.setVisibility(View.GONE);
 
         note.setText(getIntent().getStringExtra("note"));
@@ -69,40 +83,7 @@ public class OrderDetailActivity extends AppCompatActivity {
 
         address = storeInformation.split(",")[1];
 
-//        Thread thread = new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                String url = Utils.getGeoCodingUrl(address);
-//                byte[] bytes = Utils.urlToBytes(url);
-//                String result = new String(bytes);
-//                double[] latLng = Utils.getLatLngFromJsonString(result);
-//
-//            }
-//        });
-//        thread.start();
-
         String imageUrl = getIntent().getStringExtra("photoURL");
-//        if (url != null)
-//        {
-//            new AsyncTask<String, Void, byte[]>()
-//            {
-//                @Override
-//                protected byte[] doInBackground(String... params)
-//                {
-//                    String url = params[0];
-//                    return Utils.urlToBytes(url);
-//                }
-//
-//                @Override
-//                protected void onPostExecute(byte[] bytes)
-//                {
-//                    Bitmap bmp= BitmapFactory.decodeByteArray(bytes,0,bytes.length);
-//                    photoImageView.setImageBitmap(bmp);
-//                    super.onPostExecute(bytes);
-//                }
-//            }.execute(url);
-//
-//        }
 
         if (imageUrl != null)
         {
@@ -113,7 +94,30 @@ public class OrderDetailActivity extends AppCompatActivity {
         GeoCodingTask task = new GeoCodingTask();
         task.execute(address);
 
+        staticWebSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked)
+                {
+                    photoImageView.setVisibility(View.GONE);
+                    staticMapWeb.setVisibility(View.VISIBLE);
+                }
+                else
+                {
+                    photoImageView.setVisibility(View.VISIBLE);
+                    staticMapWeb.setVisibility(View.GONE);
+                }
+            }
+        });
 
+        mapFragment = (MapFragment)
+                getFragmentManager().findFragmentById(R.id.googleMap);
+        mapFragment.getMapAsync(new OnMapReadyCallback() {
+            @Override
+            public void onMapReady(GoogleMap map) {
+                googleMap = map;
+            }
+        });
 
     }
 
@@ -137,10 +141,30 @@ public class OrderDetailActivity extends AppCompatActivity {
             Bitmap bm =
                     BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
             staticMapImage.setImageBitmap(bm);
+            LatLng storeAddress = new LatLng(latLng[0], latLng[1]);
+            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                    storeAddress, 17));
+
+            String[] storeInfo =
+                    getIntent().getStringExtra("storeInfo").split(",");
+
+            googleMap.addMarker(new MarkerOptions()
+                    .title(storeInfo[0])
+                    .snippet(storeInfo[1])
+                    .position(storeAddress));
+
+            googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+                @Override
+                public boolean onMarkerClick(Marker marker) {
+                    Toast.makeText(OrderDetailActivity.this,
+                            marker.getTitle(), Toast.LENGTH_SHORT).show();
+                    return false;
+                }
+            });
         }
     }
 
-    class  ImageLoadingTask extends AsyncTask<String, Void, byte[]>
+            class  ImageLoadingTask extends AsyncTask<String, Void, byte[]>
     {
 
         ImageView imageView;
